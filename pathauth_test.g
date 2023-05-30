@@ -1,4 +1,4 @@
-package pathauth_test
+package accessauth_test
 
 import (
 	"context"
@@ -6,44 +6,31 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/nilskohrs/pathauth"
+	"github.com/samsonkehinde/accessauth"
 )
 
 func TestShouldAllowUser(t *testing.T) {
-	cfg := pathauth.CreateConfig()
-	cfg.Source.Name = "X-Roles"
-	cfg.Source.Type = "header"
-	cfg.Source.Delimiter = ","
-
-	cfg.Authorization = append(cfg.Authorization, pathauth.Authorization{
-		Path:     []string{".*/admin/.*"},
-		Priority: 1,
-		Allowed:  []string{"admin"},
-	})
-
-	cfg.Authorization = append(cfg.Authorization, pathauth.Authorization{
-		Path:     []string{".*/admin/health"},
+	cfg.Authorization = append(cfg.Authorization, accessauth.Authorization{
+		Path:     []string{"/"},
 		Host:     []string{"localhost"},
-		Priority: 10,
-		Allowed:  []string{"monitoring"},
-		Method:   []string{"Get"},
+		Role:  []string{"monitoring"},
 	})
 
 	ctx := context.Background()
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {})
 
-	handler, err := pathauth.New(ctx, next, cfg, "pathauth")
+	handler, err := accessauth.New(ctx, next, cfg, "accessauth")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	recorder := httptest.NewRecorder()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost/admin/health", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Add("X-Roles", "monitoring")
+	req.Header.Add("X-Roles", "admin")
 
 	handler.ServeHTTP(recorder, req)
 
